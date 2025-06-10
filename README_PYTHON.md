@@ -11,5 +11,6 @@ Currently implemented modules:
 - `esx_constants.py` &ndash; constants describing the ESX file layout.
 - `esx_util.py` &ndash; small helpers for byte conversions and validating an ESX
 
+
 These modules are **not** feature complete but serve as a starting point for a
 full Python translation.

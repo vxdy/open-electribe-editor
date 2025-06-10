@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from .extended_byte_buffer import ExtendedByteBuffer
 from . import esx_util
+from .esx_structs import ESXData
 
 
 class ESXFile:
@@ -14,6 +15,8 @@ class ESXFile:
             raise ValueError("Invalid ESX file")
         # store mutable buffer for modifications
         self.buffer = ExtendedByteBuffer(bytearray(data))
+        # parse basic sections for convenient access
+        self.data = ESXData.from_bytes(self.buffer.as_bytearray())
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ESXFile":
