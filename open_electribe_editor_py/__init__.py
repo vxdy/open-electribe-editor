@@ -5,6 +5,7 @@ from .extended_byte_buffer import ExtendedByteBuffer
 from . import esx_util
 from .esx_file import ESXFile
 from .esx_structs import ESXData, GlobalParameters, Patterns, Songs, Samples, Sample
+from . import sample_manager
 
 __all__ = [
     "esx_constants",
@@ -17,4 +18,5 @@ __all__ = [
     "Songs",
     "Samples",
     "Sample",
+    "sample_manager",
 ]
