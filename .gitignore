@@ -3,3 +3,5 @@
 build.xml
 */feature.temp.folder/
 com.skratchdot.electribe.builds.releng/buildDirectory/
+__pycache__/
+*.pyc
