@@ -1,102 +1,20 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from pathlib import Path
-import struct
-
-from open_electribe_editor_py import ESXFile, esx_constants as C
+from open_electribe_editor_py import ESXFile, esx_constants as C, sample_manager
 
 
 def parse_sample_header(raw: bytes) -> dict:
-    """Return a dictionary of parameters from a sample header."""
-    name = raw[0:8].decode("ascii", errors="ignore").rstrip("\x00")
-    info = {"name": name}
-    if len(raw) == C.CHUNKSIZE_SAMPLE_HEADER_MONO:
-        info.update(
-            {
-                "offset_channel1_start": struct.unpack_from(">I", raw, 8)[0],
-                "offset_channel1_end": struct.unpack_from(">I", raw, 12)[0],
-                "start": struct.unpack_from(">I", raw, 16)[0],
-                "end": struct.unpack_from(">I", raw, 20)[0],
-                "loop_start": struct.unpack_from(">I", raw, 24)[0],
-                "sample_rate": struct.unpack_from(">I", raw, 28)[0],
-                "sample_tune": struct.unpack_from(">h", raw, 32)[0],
-                "play_level": raw[34],
-                "unknown_mono1": struct.unpack_from(">b", raw, 35)[0],
-                "stretch_step": raw[36],
-                "unknown_mono2": struct.unpack_from(">b", raw, 37)[0],
-                "unknown_mono3": struct.unpack_from(">b", raw, 38)[0],
-                "unknown_mono4": struct.unpack_from(">b", raw, 39)[0],
-                "stereo": False,
-            }
-        )
-    elif len(raw) == C.CHUNKSIZE_SAMPLE_HEADER_STEREO:
-        info.update(
-            {
-                "offset_channel1_start": struct.unpack_from(">I", raw, 8)[0],
-                "offset_channel1_end": struct.unpack_from(">I", raw, 12)[0],
-                "offset_channel2_start": struct.unpack_from(">I", raw, 16)[0],
-                "offset_channel2_end": struct.unpack_from(">I", raw, 20)[0],
-                "start": struct.unpack_from(">I", raw, 24)[0],
-                "end": struct.unpack_from(">I", raw, 28)[0],
-                "sample_rate": struct.unpack_from(">I", raw, 32)[0],
-                "sample_tune": struct.unpack_from(">h", raw, 36)[0],
-                "play_level": raw[38],
-                "unknown_stereo1": struct.unpack_from(">b", raw, 39)[0],
-                "stretch_step": raw[40],
-                "unknown_stereo2": struct.unpack_from(">b", raw, 41)[0],
-                "unknown_stereo3": struct.unpack_from(">b", raw, 42)[0],
-                "unknown_stereo4": struct.unpack_from(">b", raw, 43)[0],
-                "stereo": True,
-            }
-        )
-    else:
-        info["raw_len"] = len(raw)
-    return info
+    """Wrapper around :func:`sample_manager.parse_sample_header`."""
+    return sample_manager.parse_sample_header(raw)
 
 def pack_sample_header(info: dict, raw: bytes) -> bytes:
-    """Return new raw bytes for a sample header from info."""
-    out = bytearray(raw)
-    name_bytes = info.get("name", "").encode("ascii", errors="ignore")[:8]
-    out[0:8] = name_bytes.ljust(8, b"\x00")
-    if info.get("stereo"):
-        struct.pack_into(">I", out, 8, info["offset_channel1_start"])
-        struct.pack_into(">I", out, 12, info["offset_channel1_end"])
-        struct.pack_into(">I", out, 16, info["offset_channel2_start"])
-        struct.pack_into(">I", out, 20, info["offset_channel2_end"])
-        struct.pack_into(">I", out, 24, info["start"])
-        struct.pack_into(">I", out, 28, info["end"])
-        struct.pack_into(">I", out, 32, info["sample_rate"])
-        struct.pack_into(">h", out, 36, info["sample_tune"])
-        out[38] = info["play_level"] & 0xFF
-        struct.pack_into(">b", out, 39, info["unknown_stereo1"])
-        out[40] = info["stretch_step"] & 0xFF
-        struct.pack_into(">b", out, 41, info["unknown_stereo2"])
-        struct.pack_into(">b", out, 42, info["unknown_stereo3"])
-        struct.pack_into(">b", out, 43, info["unknown_stereo4"])
-    else:
-        struct.pack_into(">I", out, 8, info["offset_channel1_start"])
-        struct.pack_into(">I", out, 12, info["offset_channel1_end"])
-        struct.pack_into(">I", out, 16, info["start"])
-        struct.pack_into(">I", out, 20, info["end"])
-        struct.pack_into(">I", out, 24, info["loop_start"])
-        struct.pack_into(">I", out, 28, info["sample_rate"])
-        struct.pack_into(">h", out, 32, info["sample_tune"])
-        out[34] = info["play_level"] & 0xFF
-        struct.pack_into(">b", out, 35, info["unknown_mono1"])
-        out[36] = info["stretch_step"] & 0xFF
-        struct.pack_into(">b", out, 37, info["unknown_mono2"])
-        struct.pack_into(">b", out, 38, info["unknown_mono3"])
-        struct.pack_into(">b", out, 39, info["unknown_mono4"])
-    return bytes(out)
+    """Wrapper around :func:`sample_manager.pack_sample_header`."""
+    return sample_manager.pack_sample_header(info, raw)
 
 def header_offset(index: int) -> tuple[int, int, bool]:
-    """Return (offset, size, stereo) for sample header at index."""
-    if index < C.NUM_SAMPLES_MONO:
-        off = C.ADDR_SAMPLE_HEADER_MONO + index * C.CHUNKSIZE_SAMPLE_HEADER_MONO
-        return off, C.CHUNKSIZE_SAMPLE_HEADER_MONO, False
-    idx = index - C.NUM_SAMPLES_MONO
-    off = C.ADDR_SAMPLE_HEADER_STEREO + idx * C.CHUNKSIZE_SAMPLE_HEADER_STEREO
-    return off, C.CHUNKSIZE_SAMPLE_HEADER_STEREO, True
+    """Wrapper around :func:`sample_manager.header_offset`."""
+    return sample_manager.header_offset(index)
 
 
 class ESXGUI(tk.Tk):
@@ -113,6 +31,9 @@ class ESXGUI(tk.Tk):
 
         tk.Button(top, text="Open ESX", command=self.load_file).pack(side=tk.LEFT)
         tk.Button(top, text="Save ESX", command=self.save_file).pack(side=tk.LEFT)
+        tk.Button(top, text="Import Sample", command=self.import_sample).pack(side=tk.LEFT)
+        tk.Button(top, text="Delete Sample", command=self.delete_sample).pack(side=tk.LEFT)
+        tk.Button(top, text="Preview", command=self.preview_sample).pack(side=tk.LEFT)
 
         body = tk.Frame(self)
         body.pack(fill=tk.BOTH, expand=True)
@@ -181,6 +102,41 @@ class ESXGUI(tk.Tk):
         self.esx.data.samples.entries[idx].raw = bytes(new_raw)
         self.listbox.delete(idx)
         self.listbox.insert(idx, f"{idx:03d}: {info.get('name','')}" )
+
+    def import_sample(self):
+        if self.esx is None or not self.listbox.curselection():
+            return
+        idx = self.listbox.curselection()[0]
+        wav_path = filedialog.askopenfilename(filetypes=[("WAV Files", "*.wav")])
+        if not wav_path:
+            return
+        try:
+            sample_manager.import_sample(self.esx, idx, wav_path)
+            self.sample_info[idx] = parse_sample_header(self.esx.data.samples.entries[idx].raw)
+            self.listbox.delete(idx)
+            self.listbox.insert(idx, f"{idx:03d}: {self.sample_info[idx].get('name','')}")
+        except Exception as exc:
+            messagebox.showerror("Error", f"Failed to import sample: {exc}")
+
+    def delete_sample(self):
+        if self.esx is None or not self.listbox.curselection():
+            return
+        idx = self.listbox.curselection()[0]
+        sample_manager.delete_sample(self.esx, idx)
+        self.sample_info[idx] = parse_sample_header(self.esx.data.samples.entries[idx].raw)
+        self.listbox.delete(idx)
+        self.listbox.insert(idx, f"{idx:03d}: {self.sample_info[idx].get('name','')}")
+
+    def preview_sample(self):
+        if self.esx is None or not self.listbox.curselection():
+            return
+        idx = self.listbox.curselection()[0]
+        data = sample_manager.read_sample_data(self.esx, idx)
+        info = self.sample_info[idx]
+        try:
+            sample_manager.play_audio(data, info.get("sample_rate", 44100), info.get("stereo", False))
+        except Exception as exc:
+            messagebox.showerror("Error", f"Preview failed: {exc}")
 
     def save_file(self):
         if self.esx is None:
